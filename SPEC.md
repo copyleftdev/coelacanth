@@ -45,7 +45,7 @@ the same input are comparable.
 | `tick`     | watch | `iter`, `exit_code`, `changed`, `dur_ms`, `out` (handle) |
 | `line`     | ts | `out` (handle) |
 | `job_start`| parallel | `job_id`, `cmd` |
-| `job_done` | parallel | `job_id`, `exit_code`, `dur_ms`, `stdout` (handle), `stderr` (handle) |
+| `job_done` | parallel | `job_id`, `exit_code`, `dur_ms`, `stdout` (handle), `stderr` (handle); on spawn failure: `exit_code` = -1 and `error` (string) instead of handles |
 | `summary`  | all | verb-specific totals |
 
 ## Handles

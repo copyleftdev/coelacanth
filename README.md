@@ -40,6 +40,13 @@ head -c 100M /dev/urandom | coel pv > /dev/null
 head -c 100M /dev/urandom | coel pv --contract > /dev/null
 # {"t":"progress","seq":1,"ts":...,"bytes":...,"rate_bps":...}
 # {"t":"summary","seq":N,"ts":...,"total_bytes":...,"elapsed_s":...,"avg_rate_bps":...}
+
+# parallel: run jobs concurrently, bounded to N, typed frames per job
+coel parallel -j4 gzip {} ::: *.log --contract     # items after :::
+ls *.txt | coel parallel -j8 wc -l                 # items from stdin
+# {"t":"job_start","seq":1,"ts":...,"job_id":0,"cmd":"gzip a.log"}
+# {"t":"job_done","seq":2,"ts":...,"job_id":0,"exit_code":0,"dur_ms":12,"stdout":"out:...","stderr":"err:..."}
+# {"t":"summary","seq":N,"ts":...,"total":N,"ok":N,"failed":0,"wall_s":...,"max_par":4}
 ```
 
 ## Status
@@ -50,9 +57,9 @@ streaming set:
 | verb | state |
 |------|-------|
 | `pv` | ✅ implemented |
+| `parallel` | ✅ implemented (bounded concurrency, handle-addressed job I/O) |
 | `watch` | contract declared, stub |
 | `ts` | contract declared, stub |
-| `parallel` | contract declared, stub |
 
 Transform verbs (`comm`, `column`, `tac`, `sponge`, `tee`) come after, on the
 same kernel.
