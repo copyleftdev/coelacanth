@@ -37,6 +37,50 @@ fn splitLines(arena: std.mem.Allocator, data: []const u8) ![]const []const u8 {
     return lines.toOwnedSlice();
 }
 
+pub const Counts = struct { only1: u64 = 0, only2: u64 = 0, both: u64 = 0 };
+
+/// Pure core: walk two sorted line lists, emit the three-column diff through
+/// `writer`, and return the category counts. Pass `std.io.null_writer` to count
+/// without producing output. Counts reflect all lines regardless of suppression.
+pub fn merge(a: []const []const u8, b: []const []const u8, s1: bool, s2: bool, s3: bool, writer: anytype) !Counts {
+    // Tab indentation depends on which lower columns are shown (POSIX comm).
+    const tab2: []const u8 = if (s1) "" else "\t";
+    const tab3: []const u8 = if (s1 and s2) "" else if (!s1 and !s2) "\t\t" else "\t";
+
+    var c = Counts{};
+    var i: usize = 0;
+    var j: usize = 0;
+    while (i < a.len and j < b.len) {
+        switch (std.mem.order(u8, a[i], b[j])) {
+            .lt => {
+                c.only1 += 1;
+                if (!s1) try writer.print("{s}\n", .{a[i]});
+                i += 1;
+            },
+            .gt => {
+                c.only2 += 1;
+                if (!s2) try writer.print("{s}{s}\n", .{ tab2, b[j] });
+                j += 1;
+            },
+            .eq => {
+                c.both += 1;
+                if (!s3) try writer.print("{s}{s}\n", .{ tab3, a[i] });
+                i += 1;
+                j += 1;
+            },
+        }
+    }
+    while (i < a.len) : (i += 1) {
+        c.only1 += 1;
+        if (!s1) try writer.print("{s}\n", .{a[i]});
+    }
+    while (j < b.len) : (j += 1) {
+        c.only2 += 1;
+        if (!s2) try writer.print("{s}{s}\n", .{ tab2, b[j] });
+    }
+    return c;
+}
+
 pub fn run(ctx: *api.Context) !u8 {
     var arena_state = std.heap.ArenaAllocator.init(ctx.gpa);
     defer arena_state.deinit();
@@ -68,48 +112,11 @@ pub fn run(ctx: *api.Context) !u8 {
     const b = try splitLines(arena, db);
 
     const out = std.io.getStdOut().writer();
-    var only1: u64 = 0;
-    var only2: u64 = 0;
-    var both: u64 = 0;
-
-    // Tab indentation depends on which lower columns are shown (POSIX comm).
-    const tab2: []const u8 = if (s1) "" else "\t";
-    const tab3: []const u8 = if (s1 and s2) "" else if (!s1 and !s2) "\t\t" else "\t";
-
-    var i: usize = 0;
-    var j: usize = 0;
-    while (i < a.len and j < b.len) {
-        switch (std.mem.order(u8, a[i], b[j])) {
-            .lt => {
-                only1 += 1;
-                if (!s1) try out.print("{s}\n", .{a[i]});
-                i += 1;
-            },
-            .gt => {
-                only2 += 1;
-                if (!s2) try out.print("{s}{s}\n", .{ tab2, b[j] });
-                j += 1;
-            },
-            .eq => {
-                both += 1;
-                if (!s3) try out.print("{s}{s}\n", .{ tab3, a[i] });
-                i += 1;
-                j += 1;
-            },
-        }
-    }
-    while (i < a.len) : (i += 1) {
-        only1 += 1;
-        if (!s1) try out.print("{s}\n", .{a[i]});
-    }
-    while (j < b.len) : (j += 1) {
-        only2 += 1;
-        if (!s2) try out.print("{s}{s}\n", .{ tab2, b[j] });
-    }
+    const c = try merge(a, b, s1, s2, s3, out);
 
     if (ctx.mode == .agent) {
         var em = contract.Emitter.init("coel.comm", "0.1.0");
-        try em.frame("summary", "\"only1\":{d},\"only2\":{d},\"both\":{d}", .{ only1, only2, both });
+        try em.frame("summary", "\"only1\":{d},\"only2\":{d},\"both\":{d}", .{ c.only1, c.only2, c.both });
     }
     return 0;
 }

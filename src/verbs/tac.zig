@@ -21,31 +21,44 @@ pub const spec = api.Spec{
 
 const max_input = 1 << 30;
 
+pub const Reversed = struct { bytes: []u8, lines: usize };
+
+/// Pure core: reverse the input's lines. Output is newline-terminated. Empty
+/// input yields empty output (so `reverseLines(reverseLines(x)) == x` for any
+/// newline-terminated x). Caller owns `bytes`.
+pub fn reverseLines(alloc: std.mem.Allocator, input: []const u8) !Reversed {
+    if (input.len == 0) return .{ .bytes = try alloc.alloc(u8, 0), .lines = 0 };
+
+    var lines = std.ArrayList([]const u8).init(alloc);
+    defer lines.deinit();
+    var it = std.mem.splitScalar(u8, input, '\n');
+    while (it.next()) |seg| try lines.append(seg);
+    // A trailing '\n' yields a final empty segment that isn't a line.
+    if (input[input.len - 1] == '\n') _ = lines.pop();
+
+    var out = std.ArrayList(u8).init(alloc);
+    errdefer out.deinit();
+    var i = lines.items.len;
+    while (i > 0) {
+        i -= 1;
+        try out.appendSlice(lines.items[i]);
+        try out.append('\n');
+    }
+    return .{ .bytes = try out.toOwnedSlice(), .lines = lines.items.len };
+}
+
 pub fn run(ctx: *api.Context) !u8 {
     const alloc = ctx.gpa;
     const data = try std.io.getStdIn().readToEndAlloc(alloc, max_input);
     defer alloc.free(data);
 
-    var lines = std.ArrayList([]const u8).init(alloc);
-    defer lines.deinit();
-    var it = std.mem.splitScalar(u8, data, '\n');
-    while (it.next()) |seg| try lines.append(seg);
-    // A trailing '\n' yields a final empty segment that isn't a line.
-    if (data.len > 0 and data[data.len - 1] == '\n' and lines.items.len > 0) {
-        _ = lines.pop();
-    }
-
-    const out = std.io.getStdOut().writer();
-    var i = lines.items.len;
-    while (i > 0) {
-        i -= 1;
-        try out.writeAll(lines.items[i]);
-        try out.writeByte('\n');
-    }
+    const r = try reverseLines(alloc, data);
+    defer alloc.free(r.bytes);
+    try std.io.getStdOut().writeAll(r.bytes);
 
     if (ctx.mode == .agent) {
         var em = contract.Emitter.init("coel.tac", "0.1.0");
-        try em.frame("summary", "\"lines\":{d}", .{lines.items.len});
+        try em.frame("summary", "\"lines\":{d}", .{r.lines});
     }
     return 0;
 }

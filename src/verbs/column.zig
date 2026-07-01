@@ -31,36 +31,21 @@ fn fail(comptime msg: []const u8) !u8 {
     return 2;
 }
 
-pub fn run(ctx: *api.Context) !u8 {
-    var arena_state = std.heap.ArenaAllocator.init(ctx.gpa);
+pub const Formatted = struct { bytes: []u8, rows: usize, cols: usize };
+
+/// Pure core: align `input` into a padded table. `sep = null` tokenizes on
+/// whitespace runs; otherwise splits on any byte in `sep`. Each column is padded
+/// to its widest cell; the last cell of a row is never trailing-padded. The
+/// parsing arena is internal; `bytes` uses the caller's allocator so it outlives
+/// the arena. Caller owns `bytes`.
+pub fn format(alloc: std.mem.Allocator, input: []const u8, sep: ?[]const u8, outsep: []const u8) !Formatted {
+    var arena_state = std.heap.ArenaAllocator.init(alloc);
     defer arena_state.deinit();
     const arena = arena_state.allocator();
 
-    var sep: ?[]const u8 = null; // null => whitespace tokenization
-    var outsep: []const u8 = "  ";
-    var i: usize = 0;
-    while (i < ctx.args.len) : (i += 1) {
-        const a = ctx.args[i];
-        if (eql(a, "-t") or eql(a, "--table")) {
-            // table mode is the default; accepted for familiarity
-        } else if (eql(a, "-s") or eql(a, "--separator")) {
-            i += 1;
-            if (i >= ctx.args.len) return fail("coel column: `-s` needs a separator\n");
-            sep = ctx.args[i];
-        } else if (eql(a, "-o") or eql(a, "--output-separator")) {
-            i += 1;
-            if (i >= ctx.args.len) return fail("coel column: `-o` needs a separator\n");
-            outsep = ctx.args[i];
-        } else {
-            return fail("coel column: unexpected argument\n");
-        }
-    }
-
-    const data = try std.io.getStdIn().readToEndAlloc(arena, max_input);
-
     var rows = std.ArrayList([]const []const u8).init(arena);
     var ncols: usize = 0;
-    var lines = std.mem.splitScalar(u8, data, '\n');
+    var lines = std.mem.splitScalar(u8, input, '\n');
     while (lines.next()) |line| {
         if (line.len == 0) continue; // skip blank lines
         var fields = std.ArrayList([]const u8).init(arena);
@@ -83,22 +68,53 @@ pub fn run(ctx: *api.Context) !u8 {
         }
     }
 
-    const out = std.io.getStdOut().writer();
+    var out = std.ArrayList(u8).init(alloc);
+    errdefer out.deinit();
     for (rows.items) |r| {
         for (r, 0..) |f, c| {
-            try out.writeAll(f);
+            try out.appendSlice(f);
             if (c != r.len - 1) {
                 var pad = width[c] - f.len;
-                while (pad > 0) : (pad -= 1) try out.writeByte(' ');
-                try out.writeAll(outsep);
+                while (pad > 0) : (pad -= 1) try out.append(' ');
+                try out.appendSlice(outsep);
             }
         }
-        try out.writeByte('\n');
+        try out.append('\n');
     }
+    return .{ .bytes = try out.toOwnedSlice(), .rows = rows.items.len, .cols = ncols };
+}
+
+pub fn run(ctx: *api.Context) !u8 {
+    var sep: ?[]const u8 = null; // null => whitespace tokenization
+    var outsep: []const u8 = "  ";
+    var i: usize = 0;
+    while (i < ctx.args.len) : (i += 1) {
+        const a = ctx.args[i];
+        if (eql(a, "-t") or eql(a, "--table")) {
+            // table mode is the default; accepted for familiarity
+        } else if (eql(a, "-s") or eql(a, "--separator")) {
+            i += 1;
+            if (i >= ctx.args.len) return fail("coel column: `-s` needs a separator\n");
+            sep = ctx.args[i];
+        } else if (eql(a, "-o") or eql(a, "--output-separator")) {
+            i += 1;
+            if (i >= ctx.args.len) return fail("coel column: `-o` needs a separator\n");
+            outsep = ctx.args[i];
+        } else {
+            return fail("coel column: unexpected argument\n");
+        }
+    }
+
+    const data = try std.io.getStdIn().readToEndAlloc(ctx.gpa, max_input);
+    defer ctx.gpa.free(data);
+
+    const f = try format(ctx.gpa, data, sep, outsep);
+    defer ctx.gpa.free(f.bytes);
+    try std.io.getStdOut().writeAll(f.bytes);
 
     if (ctx.mode == .agent) {
         var em = contract.Emitter.init("coel.column", "0.1.0");
-        try em.frame("summary", "\"rows\":{d},\"cols\":{d}", .{ rows.items.len, ncols });
+        try em.frame("summary", "\"rows\":{d},\"cols\":{d}", .{ f.rows, f.cols });
     }
     return 0;
 }
