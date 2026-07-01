@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo-transparent-cropped.png" alt="coelacanth" width="760">
+</p>
+
 # coelacanth
 
 > In 1938 a trawler off South Africa hauled up a coelacanth — a fish the fossil
