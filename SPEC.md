@@ -59,6 +59,19 @@ the same input are comparable.
 content-addressed pointer into evidence. Summaries stay compact; an agent
 fetches detail by address rather than swallowing everything up front.
 
+### Store & `explain`
+
+Handles are dereferenceable when an evidence store is configured (`--store <dir>`
+or `$COEL_STORE`). Enabled, the content-bearing verbs (`parallel`, `watch`, `ts`)
+persist their evidence content-addressed: the store file is keyed by the *full*
+64-hex BLAKE3 digest, of which the handle is the 12-hex prefix. Identical bytes
+dedupe to one object; writes are temp-then-atomic-rename, so a concurrent reader
+never sees a torn file.
+
+`coel explain <handle>` resolves the handle (prefix-matched against the store)
+and writes the bytes to stdout — the returned bytes hash back to the handle.
+Disabled (the default), handles stay pure content-ids with zero disk cost.
+
 ## Self-description
 
 - `coel describe [--all]` — every verb's contract in one deterministic call.

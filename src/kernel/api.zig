@@ -1,5 +1,6 @@
 const std = @import("std");
 const mode = @import("mode.zig");
+const handles = @import("handles.zig");
 
 /// JSON Schema scalar types we emit for frame fields.
 pub const Ty = enum {
@@ -63,6 +64,9 @@ pub const Context = struct {
     gpa: std.mem.Allocator,
     args: []const []const u8,
     mode: mode.Mode,
+    /// Evidence store for handle dereferencing; disabled unless `--store` /
+    /// `$COEL_STORE` set. Shared (pointer) so parallel workers persist safely.
+    store: *handles.Store,
 };
 
 /// A registered verb: its contract plus its entry point. `run` returns the

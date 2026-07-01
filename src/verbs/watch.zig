@@ -1,7 +1,6 @@
 const std = @import("std");
 const api = @import("../kernel/api.zig");
 const contract = @import("../kernel/contract.zig");
-const handles = @import("../kernel/handles.zig");
 
 pub const spec = api.Spec{
     .name = "watch",
@@ -146,7 +145,7 @@ pub fn run(ctx: *api.Context) !u8 {
         switch (ctx.mode) {
             .agent => {
                 var hb: [80]u8 = undefined;
-                const handle = try handles.make(&hb, "out", res.stdout);
+                const handle = try ctx.store.handle(&hb, "out", res.stdout);
                 try em.frame(
                     "tick",
                     "\"iter\":{d},\"exit_code\":{d},\"changed\":{s},\"dur_ms\":{d},\"out\":\"{s}\"",

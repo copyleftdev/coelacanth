@@ -3,6 +3,7 @@ const api = @import("kernel/api.zig");
 const mode = @import("kernel/mode.zig");
 const describe = @import("kernel/describe.zig");
 const schema = @import("kernel/schema.zig");
+const handles = @import("kernel/handles.zig");
 
 const pv = @import("verbs/pv.zig");
 const watch = @import("verbs/watch.zig");
@@ -13,6 +14,7 @@ const tee = @import("verbs/tee.zig");
 const sponge = @import("verbs/sponge.zig");
 const column = @import("verbs/column.zig");
 const comm = @import("verbs/comm.zig");
+const explain = @import("verbs/explain.zig");
 
 const VERSION = "0.1.0";
 
@@ -30,6 +32,8 @@ const registry = [_]api.Verb{
     .{ .spec = sponge.spec, .run = sponge.run },
     .{ .spec = column.spec, .run = column.run },
     .{ .spec = comm.spec, .run = comm.run },
+    // evidence
+    .{ .spec = explain.spec, .run = explain.run },
 };
 
 fn eql(a: []const u8, b: []const u8) bool {
@@ -64,6 +68,7 @@ fn usage() !void {
     try w.writeAll("\nglobal flags:\n");
     try w.writeAll("  --contract                force typed NDJSON frames on stderr\n");
     try w.writeAll("  --human                   force pretty terminal output\n");
+    try w.writeAll("  --store <dir>             persist handle evidence (or set $COEL_STORE)\n");
     try w.writeAll("\n(· = contract declared, not yet implemented)\n");
 }
 
@@ -137,20 +142,43 @@ pub fn main() !u8 {
     var args = std.ArrayList([]const u8).init(gpa);
     defer args.deinit();
     var forced: ?mode.Mode = null;
-    for (argv[rest_start..]) |a| {
+    var store_dir: ?[]const u8 = null;
+    var store_dir_owned: ?[]u8 = null;
+    defer if (store_dir_owned) |s| gpa.free(s);
+
+    var k: usize = rest_start;
+    while (k < argv.len) : (k += 1) {
+        const a = argv[k];
         if (eql(a, "--contract")) {
             forced = .agent;
         } else if (eql(a, "--human")) {
             forced = .human;
+        } else if (eql(a, "--store")) {
+            k += 1;
+            if (k >= argv.len) {
+                try stderrPrint("coel: `--store` needs a directory\n", .{});
+                return 2;
+            }
+            store_dir = argv[k];
         } else {
             try args.append(a);
         }
     }
+    // Fall back to $COEL_STORE when --store is not given.
+    if (store_dir == null) {
+        if (std.process.getEnvVarOwned(gpa, "COEL_STORE")) |v| {
+            store_dir_owned = v;
+            store_dir = v;
+        } else |_| {}
+    }
+    if (store_dir) |d| std.fs.cwd().makePath(d) catch {};
 
+    var store = handles.Store{ .dir = store_dir };
     var ctx = api.Context{
         .gpa = gpa,
         .args = args.items,
         .mode = mode.detect(forced),
+        .store = &store,
     };
     return verb.run(&ctx);
 }

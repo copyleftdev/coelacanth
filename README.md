@@ -105,6 +105,23 @@ mode (human mode is the plain filter, clean stderr):
 | `column` | ✅ align into a table (`-s` in-sep, `-o` out-gap) |
 | `comm` | ✅ three-column set diff of two sorted files (`-1/-2/-3`) |
 
+**Evidence** — dereference the handles that streaming frames carry:
+
+| verb | state |
+|------|-------|
+| `explain` | ✅ resolve a handle to its bytes from the store |
+
+With a store configured (`--store <dir>` or `$COEL_STORE`), `parallel`/`watch`/`ts`
+persist their handle evidence content-addressed, and `coel explain <handle>`
+retrieves it:
+
+```sh
+coel parallel --store .coel gzip -kf {} ::: *.log --contract 2>frames.ndjson
+coel explain --store .coel out:9f2c1a0b4d6e     # -> the exact bytes that job wrote
+```
+
+Storage is opt-in; without a store, handles stay pure content-ids at zero disk cost.
+
 Every frame validates against `coel schema <verb>` (draft 2020-12).
 
 All primitives are **clean-room reimplemented** from spec — no vendored GPL

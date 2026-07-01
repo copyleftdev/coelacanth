@@ -1,7 +1,6 @@
 const std = @import("std");
 const api = @import("../kernel/api.zig");
 const contract = @import("../kernel/contract.zig");
-const handles = @import("../kernel/handles.zig");
 
 pub const spec = api.Spec{
     .name = "ts",
@@ -117,7 +116,7 @@ pub fn run(ctx: *api.Context) !u8 {
                 try out.writeByte('\n');
                 // contract: timestamp (envelope ts) + content handle
                 var hb: [80]u8 = undefined;
-                const h = try handles.make(&hb, "line", content);
+                const h = try ctx.store.handle(&hb, "line", content);
                 try em.frame("line", "\"out\":\"{s}\"", .{h});
             },
         }

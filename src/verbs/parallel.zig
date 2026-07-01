@@ -52,6 +52,7 @@ const Runner = struct {
     items: []const []const u8,
     mode: mmode.Mode,
     em: *contract.Emitter,
+    store: *handles.Store,
     io: std.Thread.Mutex = .{},
     next: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
     okc: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
@@ -125,8 +126,8 @@ const Runner = struct {
         // by the worker's catch rather than double-counted.
         var hbo: [80]u8 = undefined;
         var hbe: [80]u8 = undefined;
-        const h_out = try handles.make(&hbo, "out", res.stdout);
-        const h_err = try handles.make(&hbe, "err", res.stderr);
+        const h_out = try r.store.handle(&hbo, "out", res.stdout);
+        const h_err = try r.store.handle(&hbe, "err", res.stderr);
 
         if (ok) {
             _ = r.okc.fetchAdd(1, .monotonic);
@@ -251,6 +252,7 @@ pub fn run(ctx: *api.Context) !u8 {
         .items = items.items,
         .mode = ctx.mode,
         .em = &em,
+        .store = ctx.store,
     };
 
     var timer = try std.time.Timer.start();
