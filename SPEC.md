@@ -30,6 +30,11 @@ Every frame carries:
 
 A run emits zero or more live frames terminated by **exactly one** `summary`.
 
+**Streaming verbs** (`pv`, `watch`, `ts`, `parallel`) emit live frames as work
+happens. **Transform verbs** (`tac`, `tee`, `sponge`, `column`, `comm`) are
+batch: they produce their payload on stdout and emit a single `summary` frame in
+agent mode (in human mode they behave as a plain Unix filter with clean stderr).
+
 ## Determinism
 
 Live tools can't be byte-identical run to run. The contract instead guarantees

@@ -83,20 +83,29 @@ Every verb picks a renderer automatically: **human** when stderr is a terminal,
 
 ## Status
 
-MVP proves the hardest part first — the dual-mode live/agent contract — on the
-streaming set:
+Nine verbs across two contract shapes, all on one kernel.
+
+**Streaming set** — live `t`-typed frames; the dual-mode live/agent contract:
 
 | verb | state |
 |------|-------|
-| `pv` | ✅ implemented |
-| `parallel` | ✅ implemented (bounded concurrency, handle-addressed job I/O) |
-| `ts` | ✅ implemented (agent keeps stdout pristine; -s/-i human formats) |
-| `watch` | ✅ implemented (typed change signal, SIGINT-graceful summary) |
+| `pv` | ✅ throughput `progress` frames |
+| `parallel` | ✅ bounded concurrency, handle-addressed job I/O |
+| `ts` | ✅ agent keeps stdout pristine; -s/-i human formats |
+| `watch` | ✅ typed change signal, SIGINT-graceful summary |
 
-**The streaming set is complete.**
+**Transform set** — batch stdin→stdout payload + one `summary` frame in agent
+mode (human mode is the plain filter, clean stderr):
 
-Transform verbs (`comm`, `column`, `tac`, `sponge`, `tee`) come after, on the
-same kernel.
+| verb | state |
+|------|-------|
+| `tac` | ✅ reverse lines |
+| `tee` | ✅ fan out to stdout + N files (`-a` append) |
+| `sponge` | ✅ soak all stdin before opening output (safe in-place edits) |
+| `column` | ✅ align into a table (`-s` in-sep, `-o` out-gap) |
+| `comm` | ✅ three-column set diff of two sorted files (`-1/-2/-3`) |
+
+Every frame validates against `coel schema <verb>` (draft 2020-12).
 
 All primitives are **clean-room reimplemented** from spec — no vendored GPL
 source, one static binary, one contract.

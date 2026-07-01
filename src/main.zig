@@ -8,16 +8,28 @@ const pv = @import("verbs/pv.zig");
 const watch = @import("verbs/watch.zig");
 const ts = @import("verbs/ts.zig");
 const parallel = @import("verbs/parallel.zig");
+const tac = @import("verbs/tac.zig");
+const tee = @import("verbs/tee.zig");
+const sponge = @import("verbs/sponge.zig");
+const column = @import("verbs/column.zig");
+const comm = @import("verbs/comm.zig");
 
 const VERSION = "0.1.0";
 
 /// The toolbox. Every verb is self-describing; `coel describe` dumps the whole
 /// surface. A living fossil: primitives declared extinct, still swimming.
 const registry = [_]api.Verb{
+    // streaming set
     .{ .spec = pv.spec, .run = pv.run },
     .{ .spec = watch.spec, .run = watch.run },
     .{ .spec = ts.spec, .run = ts.run },
     .{ .spec = parallel.spec, .run = parallel.run },
+    // transform set
+    .{ .spec = tac.spec, .run = tac.run },
+    .{ .spec = tee.spec, .run = tee.run },
+    .{ .spec = sponge.spec, .run = sponge.run },
+    .{ .spec = column.spec, .run = column.run },
+    .{ .spec = comm.spec, .run = comm.run },
 };
 
 fn eql(a: []const u8, b: []const u8) bool {
