@@ -8,7 +8,17 @@ pub const spec = api.Spec{
     .inputs = "byte stream on stdin",
     .outputs = "identical byte stream on stdout (payload unchanged)",
     .schema = "coel.pv/0.1.0",
-    .frames = &.{ "progress", "summary" },
+    .frames = &.{
+        .{ .t = "progress", .fields = &.{
+            .{ .name = "bytes", .ty = .integer },
+            .{ .name = "rate_bps", .ty = .integer },
+        } },
+        .{ .t = "summary", .fields = &.{
+            .{ .name = "total_bytes", .ty = .integer },
+            .{ .name = "elapsed_s", .ty = .number },
+            .{ .name = "avg_rate_bps", .ty = .integer },
+        } },
+    },
     .invariants = &.{
         "stdout bytes equal stdin bytes, in order, unmodified",
         "contract frames are written only to stderr",

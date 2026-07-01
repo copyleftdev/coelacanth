@@ -14,12 +14,21 @@ fn jsonStrArray(w: anytype, items: []const []const u8) !void {
     try w.writeByte(']');
 }
 
+fn frameNames(w: anytype, frames: []const api.FrameDef) !void {
+    try w.writeByte('[');
+    for (frames, 0..) |f, i| {
+        if (i != 0) try w.writeByte(',');
+        try w.print("\"{s}\"", .{f.t});
+    }
+    try w.writeByte(']');
+}
+
 fn verbObject(w: anytype, s: api.Spec) !void {
     try w.print(
         "{{\"name\":\"{s}\",\"summary\":\"{s}\",\"inputs\":\"{s}\",\"outputs\":\"{s}\",\"schema\":\"{s}\",\"implemented\":{s},\"frames\":",
         .{ s.name, s.summary, s.inputs, s.outputs, s.schema, if (s.implemented) "true" else "false" },
     );
-    try jsonStrArray(w, s.frames);
+    try frameNames(w, s.frames);
     try w.writeAll(",\"invariants\":");
     try jsonStrArray(w, s.invariants);
     try w.writeByte('}');

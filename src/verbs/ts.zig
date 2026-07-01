@@ -9,7 +9,15 @@ pub const spec = api.Spec{
     .inputs = "line stream on stdin; -s (since start) / -i (incremental) set human format",
     .outputs = "human: '<stamp> <line>'; agent: raw line on stdout, timestamp in the line frame",
     .schema = "coel.ts/0.1.0",
-    .frames = &.{ "line", "summary" },
+    .frames = &.{
+        .{ .t = "line", .fields = &.{
+            .{ .name = "out", .ty = .string },
+        } },
+        .{ .t = "summary", .fields = &.{
+            .{ .name = "lines", .ty = .integer },
+            .{ .name = "span_s", .ty = .number },
+        } },
+    },
     .invariants = &.{
         "in agent mode the payload line is emitted unchanged; the timestamp lives in the frame, never baked into stdout text",
         "one line frame per input line, in order",

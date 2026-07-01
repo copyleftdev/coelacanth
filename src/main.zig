@@ -2,6 +2,7 @@ const std = @import("std");
 const api = @import("kernel/api.zig");
 const mode = @import("kernel/mode.zig");
 const describe = @import("kernel/describe.zig");
+const schema = @import("kernel/schema.zig");
 
 const pv = @import("verbs/pv.zig");
 const watch = @import("verbs/watch.zig");
@@ -45,6 +46,7 @@ fn usage() !void {
     }
     try w.writeAll("\nmeta:\n");
     try w.writeAll("  describe [--all|<verb>]   machine-readable capability surface\n");
+    try w.writeAll("  schema [--all|<verb>]     JSON Schema for a verb's frames\n");
     try w.writeAll("  version                   print version\n");
     try w.writeAll("  help                      this message\n");
     try w.writeAll("\nglobal flags:\n");
@@ -97,6 +99,19 @@ pub fn main() !u8 {
             return 0;
         }
         try stderrPrint("coel describe: unknown verb '{s}'\n", .{rest[0]});
+        return 2;
+    }
+    if (eql(verb_name, "schema")) {
+        const rest = argv[rest_start..];
+        if (rest.len == 0 or eql(rest[0], "--all")) {
+            try schema.all(&registry);
+            return 0;
+        }
+        if (findVerb(rest[0])) |v| {
+            try schema.one(v.spec);
+            return 0;
+        }
+        try stderrPrint("coel schema: unknown verb '{s}'\n", .{rest[0]});
         return 2;
     }
 

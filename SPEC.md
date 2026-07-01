@@ -58,9 +58,14 @@ fetches detail by address rather than swallowing everything up front.
 
 - `coel describe [--all]` — every verb's contract in one deterministic call.
 - `coel describe <verb>` — one verb's contract.
+- `coel schema <verb>` — a JSON Schema (draft 2020-12) whose `oneOf` covers
+  every frame type the verb emits: `t` pinned to a const, envelope fields typed,
+  `additionalProperties: false`. Any emitted frame validates against it.
+- `coel schema [--all]` — every verb's frame schema, keyed by name.
 
-Both are derived from each verb's `Spec` declaration, so a verb cannot drift
-from its own contract.
+All of these are derived from each verb's `Spec` (its typed `FrameDef` list is
+the single source of truth), so a verb cannot drift from its own contract, and
+`describe`/`schema` cannot drift from each other.
 
 ## Versioning
 

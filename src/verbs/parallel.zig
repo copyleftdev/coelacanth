@@ -11,7 +11,27 @@ pub const spec = api.Spec{
     .inputs = "a command template (with {}) + items from stdin or after :::",
     .outputs = "each job's stdout, grouped per job, addressable via handle (payload)",
     .schema = "coel.parallel/0.1.0",
-    .frames = &.{ "job_start", "job_done", "summary" },
+    .frames = &.{
+        .{ .t = "job_start", .fields = &.{
+            .{ .name = "job_id", .ty = .integer },
+            .{ .name = "cmd", .ty = .string },
+        } },
+        .{ .t = "job_done", .fields = &.{
+            .{ .name = "job_id", .ty = .integer },
+            .{ .name = "exit_code", .ty = .integer },
+            .{ .name = "dur_ms", .ty = .integer },
+            .{ .name = "stdout", .ty = .string, .required = false },
+            .{ .name = "stderr", .ty = .string, .required = false },
+            .{ .name = "error", .ty = .string, .required = false },
+        } },
+        .{ .t = "summary", .fields = &.{
+            .{ .name = "total", .ty = .integer },
+            .{ .name = "ok", .ty = .integer },
+            .{ .name = "failed", .ty = .integer },
+            .{ .name = "wall_s", .ty = .number },
+            .{ .name = "max_par", .ty = .integer },
+        } },
+    },
     .invariants = &.{
         "every job_start has a matching job_done with the same job_id",
         "at most max_par jobs run at once",

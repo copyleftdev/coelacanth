@@ -9,7 +9,21 @@ pub const spec = api.Spec{
     .inputs = "a command + args; -n <secs> interval (default 2), -c <n> max iterations (0=infinite)",
     .outputs = "human: repainted latest output; agent: no stdout payload — the typed change signal is the product",
     .schema = "coel.watch/0.1.0",
-    .frames = &.{ "tick", "summary" },
+    .frames = &.{
+        .{ .t = "tick", .fields = &.{
+            .{ .name = "iter", .ty = .integer },
+            .{ .name = "exit_code", .ty = .integer },
+            .{ .name = "changed", .ty = .boolean },
+            .{ .name = "dur_ms", .ty = .integer },
+            .{ .name = "out", .ty = .string, .required = false },
+            .{ .name = "error", .ty = .string, .required = false },
+        } },
+        .{ .t = "summary", .fields = &.{
+            .{ .name = "iters", .ty = .integer },
+            .{ .name = "changes", .ty = .integer },
+            .{ .name = "last_exit", .ty = .integer },
+        } },
+    },
     .invariants = &.{
         "one tick frame per iteration, in order (iter increments from 1)",
         "tick.changed is true iff stdout differs from the previous iteration (false on the first tick)",

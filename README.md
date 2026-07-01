@@ -32,6 +32,20 @@ zig build test
 coel help
 coel describe                          # whole capability surface, one JSON call
 coel describe pv
+coel schema pv                         # JSON Schema (draft 2020-12) for pv's frames
+coel schema --all                      # every verb's frame schema, keyed by name
+
+# the contract validates its own output — every frame conforms to `coel schema <verb>`:
+coel schema parallel > pj.schema.json
+coel parallel echo {} ::: a b --contract 2>frames.ndjson >/dev/null
+python3 - pj.schema.json < frames.ndjson <<'PY'
+import sys, json, jsonschema
+schema = json.load(open(sys.argv[1]))
+for line in sys.stdin:
+    if line.strip():
+        jsonschema.validate(json.loads(line), schema)  # raises if any frame is off-contract
+print("all frames valid")
+PY
 
 # human mode (stderr is a terminal): a live throughput line
 head -c 100M /dev/urandom | coel pv > /dev/null
