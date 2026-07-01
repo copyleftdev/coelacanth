@@ -53,6 +53,12 @@ tail -f app.log | coel ts --human          # 2026-07-01 04:40:06 <line>
 tail -f app.log | coel ts --human -s       # 0.000 / 0.252 / ...  (since start)
 producer | coel ts --contract              # stdout = raw lines, timestamp in the frame:
 # {"t":"line","seq":1,"ts":1782880763048,"out":"line:22896bcbc3d1"}
+
+# watch: turn "re-run a command" into a typed change signal
+coel watch -n 5 kubectl get pods --contract      # tick per run; changed iff output differs
+coel watch -n 2 -c 10 date +%N --contract        # -c caps iterations (0 = infinite)
+# {"t":"tick","seq":2,"ts":...,"iter":2,"exit_code":0,"changed":true,"dur_ms":3,"out":"out:d213c0e39ccd"}
+# {"t":"summary","seq":N,"ts":...,"iters":N,"changes":M,"last_exit":0}   # also emitted on Ctrl-C
 ```
 
 ## Modes
@@ -71,7 +77,9 @@ streaming set:
 | `pv` | ✅ implemented |
 | `parallel` | ✅ implemented (bounded concurrency, handle-addressed job I/O) |
 | `ts` | ✅ implemented (agent keeps stdout pristine; -s/-i human formats) |
-| `watch` | contract declared, stub |
+| `watch` | ✅ implemented (typed change signal, SIGINT-graceful summary) |
+
+**The streaming set is complete.**
 
 Transform verbs (`comm`, `column`, `tac`, `sponge`, `tee`) come after, on the
 same kernel.
