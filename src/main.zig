@@ -49,6 +49,7 @@ fn usage() !void {
     try w.writeAll("  help                      this message\n");
     try w.writeAll("\nglobal flags:\n");
     try w.writeAll("  --contract                force typed NDJSON frames on stderr\n");
+    try w.writeAll("  --human                   force pretty terminal output\n");
     try w.writeAll("\n(· = contract declared, not yet implemented)\n");
 }
 
@@ -108,10 +109,12 @@ pub fn main() !u8 {
     // Strip global flags; hand the rest to the verb.
     var args = std.ArrayList([]const u8).init(gpa);
     defer args.deinit();
-    var force_contract = false;
+    var forced: ?mode.Mode = null;
     for (argv[rest_start..]) |a| {
         if (eql(a, "--contract")) {
-            force_contract = true;
+            forced = .agent;
+        } else if (eql(a, "--human")) {
+            forced = .human;
         } else {
             try args.append(a);
         }
@@ -120,7 +123,7 @@ pub fn main() !u8 {
     var ctx = api.Context{
         .gpa = gpa,
         .args = args.items,
-        .mode = mode.detect(force_contract),
+        .mode = mode.detect(forced),
     };
     return verb.run(&ctx);
 }

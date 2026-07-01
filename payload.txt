@@ -1,4 +1,0 @@
-hello beta
-hello alpha
-hello gamma
-hello delta

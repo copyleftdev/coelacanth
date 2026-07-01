@@ -5,14 +5,12 @@ const std = @import("std");
 /// emits the typed NDJSON contract frames defined in SPEC.md.
 pub const Mode = enum { human, agent };
 
-/// Auto-detect the mode.
-///
-/// Contract telemetry always goes to stderr (stdout is reserved for payload),
-/// so the tell is: is stderr a terminal? If a human is watching, render for
-/// them; otherwise a machine is consuming the stream, so emit the contract.
-/// `--contract` forces agent mode regardless.
-pub fn detect(force_contract: bool) Mode {
-    if (force_contract) return .agent;
+/// Resolve the mode. If `forced` is non-null (`--contract` → agent,
+/// `--human` → human), honor it. Otherwise auto-detect: contract telemetry
+/// goes to stderr (stdout is reserved for payload), so the tell is whether
+/// stderr is a terminal — a human is watching iff it is.
+pub fn detect(forced: ?Mode) Mode {
+    if (forced) |m| return m;
     const stderr_is_tty = std.posix.isatty(std.io.getStdErr().handle);
     return if (stderr_is_tty) .human else .agent;
 }

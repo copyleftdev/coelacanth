@@ -15,7 +15,7 @@ neither.
 
 Every verb has one engine and two renderers:
 
-- **human** — pretty, ephemeral output for a terminal. Chosen when stderr is a TTY.
+- **human** — pretty, ephemeral output for a terminal. Chosen when stderr is a TTY, or forced with `--human`.
 - **agent** — the NDJSON frame stream below. Chosen when stderr is not a TTY, or forced with `--contract`.
 
 ## Frame envelope

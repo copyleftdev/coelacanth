@@ -47,7 +47,19 @@ ls *.txt | coel parallel -j8 wc -l                 # items from stdin
 # {"t":"job_start","seq":1,"ts":...,"job_id":0,"cmd":"gzip a.log"}
 # {"t":"job_done","seq":2,"ts":...,"job_id":0,"exit_code":0,"dur_ms":12,"stdout":"out:...","stderr":"err:..."}
 # {"t":"summary","seq":N,"ts":...,"total":N,"ok":N,"failed":0,"wall_s":...,"max_par":4}
+
+# ts: human bakes the timestamp into text; agent keeps stdout verbatim
+tail -f app.log | coel ts --human          # 2026-07-01 04:40:06 <line>
+tail -f app.log | coel ts --human -s       # 0.000 / 0.252 / ...  (since start)
+producer | coel ts --contract              # stdout = raw lines, timestamp in the frame:
+# {"t":"line","seq":1,"ts":1782880763048,"out":"line:22896bcbc3d1"}
 ```
+
+## Modes
+
+Every verb picks a renderer automatically: **human** when stderr is a terminal,
+**agent** (typed NDJSON on stderr) otherwise. Force it with `--contract` or
+`--human`.
 
 ## Status
 
@@ -58,8 +70,8 @@ streaming set:
 |------|-------|
 | `pv` | ✅ implemented |
 | `parallel` | ✅ implemented (bounded concurrency, handle-addressed job I/O) |
+| `ts` | ✅ implemented (agent keeps stdout pristine; -s/-i human formats) |
 | `watch` | contract declared, stub |
-| `ts` | contract declared, stub |
 
 Transform verbs (`comm`, `column`, `tac`, `sponge`, `tee`) come after, on the
 same kernel.

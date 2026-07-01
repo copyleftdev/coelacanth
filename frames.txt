@@ -1,9 +1,0 @@
-{"t":"job_start","seq":1,"ts":1782880469987,"job_id":1,"cmd":"echo hello beta"}
-{"t":"job_start","seq":2,"ts":1782880469993,"job_id":0,"cmd":"echo hello alpha"}
-{"t":"job_done","seq":3,"ts":1782880469996,"job_id":1,"exit_code":0,"dur_ms":2,"stdout":"out:1c778a7b4d85","stderr":"err:af1349b9f5f9"}
-{"t":"job_start","seq":4,"ts":1782880469996,"job_id":2,"cmd":"echo hello gamma"}
-{"t":"job_done","seq":5,"ts":1782880469996,"job_id":0,"exit_code":0,"dur_ms":3,"stdout":"out:14077733484e","stderr":"err:af1349b9f5f9"}
-{"t":"job_start","seq":6,"ts":1782880469997,"job_id":3,"cmd":"echo hello delta"}
-{"t":"job_done","seq":7,"ts":1782880469999,"job_id":2,"exit_code":0,"dur_ms":3,"stdout":"out:f1707308f97f","stderr":"err:af1349b9f5f9"}
-{"t":"job_done","seq":8,"ts":1782880470000,"job_id":3,"exit_code":0,"dur_ms":3,"stdout":"out:fab67f77201d","stderr":"err:af1349b9f5f9"}
-{"t":"summary","seq":9,"ts":1782880470000,"total":4,"ok":4,"failed":0,"wall_s":0.014,"max_par":2}
