@@ -126,3 +126,12 @@ Every frame validates against `coel schema <verb>` (draft 2020-12).
 
 All primitives are **clean-room reimplemented** from spec — no vendored GPL
 source, one static binary, one contract.
+
+## Testing
+
+Property tests, in-process `run()` tests, native fuzzing, and a mutation-testing
+harness (94.5% score — every non-equivalent mutant killed). See [TESTING.md](./TESTING.md).
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
