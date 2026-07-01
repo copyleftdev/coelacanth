@@ -117,6 +117,13 @@ test "prop: column preserves fields and aligns every column" {
                 std.debug.print("\ncolumn produced too few lines\n", .{});
                 return error.TooFewLines;
             };
+            // No trailing padding: the last cell is never padded.
+            if (out_line.len > 0) {
+                std.testing.expect(out_line[out_line.len - 1] != ' ') catch |e| {
+                    std.debug.print("\ntrailing space in:\n{s}\n", .{f.bytes});
+                    return e;
+                };
+            }
             const in_toks = try tokenize(a, in_line);
             const out_toks = try tokenize(a, out_line);
             try std.testing.expectEqual(in_toks.len, out_toks.len);
@@ -134,6 +141,77 @@ test "prop: column preserves fields and aligns every column" {
             }
             row += 1;
         }
+        _ = arena.reset(.retain_capacity);
+    }
+}
+
+fn contains(set: []const []const u8, x: []const u8) bool {
+    for (set) |s| if (std.mem.eql(u8, s, x)) return true;
+    return false;
+}
+
+// comm output (not just counts): each line's tab prefix must classify it into
+// the right category, and its text must actually belong there.
+test "prop: comm output — tab prefixes classify every line correctly" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    var prng = std.Random.DefaultPrng.init(0x7AB5_0C05);
+    const rand = prng.random();
+
+    var i: usize = 0;
+    while (i < iters) : (i += 1) {
+        const a = arena.allocator();
+        const sa = try gen.sortedDistinct(a, rand, 12, 5);
+        const sb = try gen.sortedDistinct(a, rand, 12, 5);
+        var buf = std.ArrayList(u8).init(a);
+        const c = try comm.merge(sa, sb, false, false, false, buf.writer());
+
+        var n1: u64 = 0;
+        var n2: u64 = 0;
+        var nb: u64 = 0;
+        var it = std.mem.splitScalar(u8, buf.items, '\n');
+        while (it.next()) |line| {
+            if (line.len == 0) continue;
+            if (std.mem.startsWith(u8, line, "\t\t")) {
+                nb += 1;
+                const t = line[2..];
+                try std.testing.expect(contains(sa, t) and contains(sb, t));
+            } else if (std.mem.startsWith(u8, line, "\t")) {
+                n2 += 1;
+                const t = line[1..];
+                try std.testing.expect(contains(sb, t) and !contains(sa, t));
+            } else {
+                n1 += 1;
+                try std.testing.expect(contains(sa, line) and !contains(sb, line));
+            }
+        }
+        try std.testing.expectEqual(c.only1, n1);
+        try std.testing.expectEqual(c.only2, n2);
+        try std.testing.expectEqual(c.both, nb);
+        _ = arena.reset(.retain_capacity);
+    }
+}
+
+test "prop: comm.splitLines round-trips join-with-newline (incl. empty)" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    var prng = std.Random.DefaultPrng.init(0x5911_7011);
+    const rand = prng.random();
+
+    var i: usize = 0;
+    while (i < iters) : (i += 1) {
+        const a = arena.allocator();
+        const lines = try gen.sortedDistinct(a, rand, 12, 6); // nonempty words
+        var buf = std.ArrayList(u8).init(a);
+        for (lines, 0..) |line, idx| {
+            if (idx > 0) try buf.append('\n');
+            try buf.appendSlice(line);
+        }
+        if (lines.len > 0) try buf.append('\n');
+
+        const got = try comm.splitLines(a, buf.items);
+        try std.testing.expectEqual(lines.len, got.len);
+        for (lines, got) |want, have| try std.testing.expectEqualStrings(want, have);
         _ = arena.reset(.retain_capacity);
     }
 }

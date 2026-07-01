@@ -27,13 +27,14 @@ fn eql(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, a, b);
 }
 
-fn splitLines(arena: std.mem.Allocator, data: []const u8) ![]const []const u8 {
+/// Split `data` into lines. Empty input yields zero lines (not one empty
+/// line); a trailing newline does not create a spurious final empty line.
+pub fn splitLines(arena: std.mem.Allocator, data: []const u8) ![]const []const u8 {
+    if (data.len == 0) return &.{};
     var lines = std.ArrayList([]const u8).init(arena);
     var it = std.mem.splitScalar(u8, data, '\n');
     while (it.next()) |seg| try lines.append(seg);
-    if (data.len > 0 and data[data.len - 1] == '\n' and lines.items.len > 0) {
-        _ = lines.pop();
-    }
+    if (data[data.len - 1] == '\n') _ = lines.pop();
     return lines.toOwnedSlice();
 }
 
