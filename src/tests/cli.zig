@@ -71,4 +71,25 @@ test "run: comm needs two files, and renders the three-column diff" {
     // apple only in A; banana in both (two tabs); cherry only in B (one tab)
     try std.testing.expectEqualStrings("apple\n\t\tbanana\n\tcherry\n", r.out);
     try std.testing.expect(std.mem.indexOf(u8, r.err, "\"both\":1") != null);
+
+    // Suppression flags reshape which columns print and how they indent.
+    const s1 = try h.runCase(alloc, comm.run, &.{ "-1", pa, pb }, .human, "");
+    defer h.free(alloc, s1);
+    try std.testing.expectEqualStrings("\tbanana\ncherry\n", s1.out); // col1 gone; both->\t, only2->none
+
+    const s2 = try h.runCase(alloc, comm.run, &.{ "-2", pa, pb }, .human, "");
+    defer h.free(alloc, s2);
+    try std.testing.expectEqualStrings("apple\n\tbanana\n", s2.out); // col2 gone; both->\t
+
+    const s3 = try h.runCase(alloc, comm.run, &.{ "-3", pa, pb }, .human, "");
+    defer h.free(alloc, s3);
+    try std.testing.expectEqualStrings("apple\n\tcherry\n", s3.out); // both gone; only2->\t
+}
+
+test "run: column -o uses a custom output separator" {
+    const alloc = std.testing.allocator;
+    const o = try h.runCase(alloc, column.run, &.{ "-o", "|" }, .human, "a bb\nccc d\n");
+    defer h.free(alloc, o);
+    try std.testing.expectEqual(@as(u8, 0), o.code);
+    try std.testing.expectEqualStrings("a  |bb\nccc|d\n", o.out);
 }
