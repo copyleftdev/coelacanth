@@ -93,3 +93,16 @@ test "run: column -o uses a custom output separator" {
     try std.testing.expectEqual(@as(u8, 0), o.code);
     try std.testing.expectEqualStrings("a  |bb\nccc|d\n", o.out);
 }
+
+test "run: column mode gating — agent emits a summary, human does not" {
+    const alloc = std.testing.allocator;
+
+    const ag = try h.runCase(alloc, column.run, &.{}, .agent, "a b\n");
+    defer h.free(alloc, ag);
+    try std.testing.expectEqualStrings("a  b\n", ag.out);
+    try std.testing.expect(std.mem.indexOf(u8, ag.err, "\"t\":\"summary\"") != null);
+
+    const hu = try h.runCase(alloc, column.run, &.{}, .human, "a b\n");
+    defer h.free(alloc, hu);
+    try std.testing.expectEqual(@as(usize, 0), hu.err.len);
+}
