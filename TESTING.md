@@ -12,6 +12,13 @@ zig build fuzz                 # run fuzz targets once; add --fuzz to loop with 
 python3 tools/mutate.py        # mutation score over the logic files
 ```
 
+A versioned pre-push hook (`tools/hooks/pre-push`) runs `zig build test` and
+aborts the push on failure. Enable it once per clone:
+
+```sh
+git config core.hooksPath tools/hooks
+```
+
 ## Layer 1 — pure cores
 
 Each transform separates logic from I/O so it's testable in-memory:

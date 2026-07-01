@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-push gate: run the test suite before any push. A non-zero exit aborts the
+# push. Override in a pinch with `git push --no-verify`.
+#
+# Versioned hook — enable it in a clone with:
+#     git config core.hooksPath tools/hooks
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+if ! command -v zig >/dev/null 2>&1; then
+    echo "pre-push: zig not found on PATH — cannot run tests, aborting push." >&2
+    exit 1
+fi
+
+echo "pre-push: zig build test ..." >&2
+if ! zig build test; then
+    echo "pre-push: tests FAILED — push aborted (use --no-verify to override)." >&2
+    exit 1
+fi
+echo "pre-push: tests passed." >&2
+exit 0
