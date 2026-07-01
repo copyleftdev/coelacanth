@@ -49,15 +49,15 @@ pub fn reverseLines(alloc: std.mem.Allocator, input: []const u8) !Reversed {
 
 pub fn run(ctx: *api.Context) !u8 {
     const alloc = ctx.gpa;
-    const data = try std.io.getStdIn().readToEndAlloc(alloc, max_input);
+    const data = try ctx.stdin.readAllAlloc(alloc, max_input);
     defer alloc.free(data);
 
     const r = try reverseLines(alloc, data);
     defer alloc.free(r.bytes);
-    try std.io.getStdOut().writeAll(r.bytes);
+    try ctx.stdout.writeAll(r.bytes);
 
     if (ctx.mode == .agent) {
-        var em = contract.Emitter.init("coel.tac", "0.1.0");
+        var em = contract.Emitter.init(ctx.stderr, "coel.tac", "0.1.0");
         try em.frame("summary", "\"lines\":{d}", .{r.lines});
     }
     return 0;

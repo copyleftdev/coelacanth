@@ -53,6 +53,8 @@ const Runner = struct {
     mode: mmode.Mode,
     em: *contract.Emitter,
     store: *handles.Store,
+    out: std.io.AnyWriter,
+    err: std.io.AnyWriter,
     io: std.Thread.Mutex = .{},
     next: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
     okc: std.atomic.Value(u64) = std.atomic.Value(u64).init(0),
@@ -142,7 +144,7 @@ const Runner = struct {
         defer r.io.unlock();
         switch (r.mode) {
             .agent => r.em.frame("job_start", "\"job_id\":{d},\"cmd\":\"{s}\"", .{ id, cmd_esc }) catch {},
-            .human => std.io.getStdErr().writer().print("[job {d}] ▶ {s}\n", .{ id, cmd_raw }) catch {},
+            .human => r.err.print("[job {d}] ▶ {s}\n", .{ id, cmd_raw }) catch {},
         }
     }
 
@@ -151,14 +153,14 @@ const Runner = struct {
         defer r.io.unlock();
         // Payload passthrough: one contiguous block per job (the mutex is what
         // makes "never interleaved" true).
-        std.io.getStdOut().writer().writeAll(out_bytes) catch {};
+        r.out.writeAll(out_bytes) catch {};
         switch (r.mode) {
             .agent => r.em.frame(
                 "job_done",
                 "\"job_id\":{d},\"exit_code\":{d},\"dur_ms\":{d},\"stdout\":\"{s}\",\"stderr\":\"{s}\"",
                 .{ id, exit_code, dur_ms, h_out, h_err },
             ) catch {},
-            .human => std.io.getStdErr().writer().print("[job {d}] ✓ exit={d} {d}ms out={s}\n", .{ id, exit_code, dur_ms, h_out }) catch {},
+            .human => r.err.print("[job {d}] ✓ exit={d} {d}ms out={s}\n", .{ id, exit_code, dur_ms, h_out }) catch {},
         }
     }
 
@@ -167,7 +169,7 @@ const Runner = struct {
         defer r.io.unlock();
         switch (r.mode) {
             .agent => r.em.frame("job_done", "\"job_id\":{d},\"exit_code\":-1,\"dur_ms\":{d},\"error\":\"{s}\"", .{ id, dur_ms, ename }) catch {},
-            .human => std.io.getStdErr().writer().print("[job {d}] ✗ error: {s}\n", .{ id, ename }) catch {},
+            .human => r.err.print("[job {d}] ✗ error: {s}\n", .{ id, ename }) catch {},
         }
     }
 };
@@ -182,8 +184,8 @@ fn worker(r: *Runner) void {
     }
 }
 
-fn fail(comptime msg: []const u8) !u8 {
-    try std.io.getStdErr().writer().writeAll(msg);
+fn fail(w: std.io.AnyWriter, comptime msg: []const u8) !u8 {
+    try w.writeAll(msg);
     return 2;
 }
 
@@ -210,18 +212,18 @@ pub fn run(ctx: *api.Context) !u8 {
         }
         if (std.mem.eql(u8, a, "-j") or std.mem.eql(u8, a, "--jobs")) {
             i += 1;
-            if (i >= ctx.args.len) return fail("coel parallel: `-j` needs a number\n");
-            jobs_opt = std.fmt.parseInt(usize, ctx.args[i], 10) catch return fail("coel parallel: bad -j value\n");
+            if (i >= ctx.args.len) return fail(ctx.stderr, "coel parallel: `-j` needs a number\n");
+            jobs_opt = std.fmt.parseInt(usize, ctx.args[i], 10) catch return fail(ctx.stderr, "coel parallel: bad -j value\n");
             continue;
         }
         if (std.mem.startsWith(u8, a, "-j") and a.len > 2) {
-            jobs_opt = std.fmt.parseInt(usize, a[2..], 10) catch return fail("coel parallel: bad -j value\n");
+            jobs_opt = std.fmt.parseInt(usize, a[2..], 10) catch return fail(ctx.stderr, "coel parallel: bad -j value\n");
             continue;
         }
         try template.append(a);
     }
 
-    if (template.items.len == 0) return fail("coel parallel: no command given\n");
+    if (template.items.len == 0) return fail(ctx.stderr, "coel parallel: no command given\n");
 
     // Items: after ::: (inline), else one per line from stdin.
     var stdin_buf: []u8 = &.{};
@@ -231,7 +233,7 @@ pub fn run(ctx: *api.Context) !u8 {
     if (seen_sep) {
         try items.appendSlice(inline_items.items);
     } else {
-        stdin_buf = try std.io.getStdIn().readToEndAlloc(alloc, 1 << 30);
+        stdin_buf = try ctx.stdin.readAllAlloc(alloc, 1 << 30);
         var it = std.mem.splitScalar(u8, stdin_buf, '\n');
         while (it.next()) |line| {
             const t = std.mem.trimRight(u8, line, "\r");
@@ -245,7 +247,7 @@ pub fn run(ctx: *api.Context) !u8 {
     if (jobs == 0) jobs = cpu;
     const max_par = @min(jobs, @max(items.items.len, 1));
 
-    var em = contract.Emitter.init("coel.parallel", "0.1.0");
+    var em = contract.Emitter.init(ctx.stderr, "coel.parallel", "0.1.0");
     var runner = Runner{
         .alloc = alloc,
         .template = template.items,
@@ -253,6 +255,8 @@ pub fn run(ctx: *api.Context) !u8 {
         .mode = ctx.mode,
         .em = &em,
         .store = ctx.store,
+        .out = ctx.stdout,
+        .err = ctx.stderr,
     };
 
     var timer = try std.time.Timer.start();
@@ -272,7 +276,7 @@ pub fn run(ctx: *api.Context) !u8 {
             "\"total\":{d},\"ok\":{d},\"failed\":{d},\"wall_s\":{d:.3},\"max_par\":{d}",
             .{ items.items.len, okc, failedc, wall_s, max_par },
         ),
-        .human => try std.io.getStdErr().writer().print(
+        .human => try ctx.stderr.print(
             "done: {d} ok, {d} failed, {d} total in {d:.3}s (max_par={d})\n",
             .{ okc, failedc, items.items.len, wall_s, max_par },
         ),

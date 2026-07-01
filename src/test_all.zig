@@ -21,4 +21,5 @@ test {
     _ = @import("verbs/comm.zig");
     _ = @import("verbs/explain.zig");
     _ = @import("tests/properties.zig");
+    _ = @import("tests/cli.zig");
 }

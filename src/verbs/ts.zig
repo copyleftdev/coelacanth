@@ -65,14 +65,14 @@ pub fn run(ctx: *api.Context) !u8 {
         } else if (eql(a, "-i") or eql(a, "--incremental")) {
             stamp = .incremental;
         } else {
-            try std.io.getStdErr().writer().print("coel ts: unknown option '{s}'\n", .{a});
+            try ctx.stderr.print("coel ts: unknown option '{s}'\n", .{a});
             return 2;
         }
     }
 
-    var em = contract.Emitter.init("coel.ts", "0.1.0");
-    const out = std.io.getStdOut().writer();
-    var br = std.io.bufferedReader(std.io.getStdIn().reader());
+    var em = contract.Emitter.init(ctx.stderr, "coel.ts", "0.1.0");
+    const out = ctx.stdout;
+    var br = std.io.bufferedReader(ctx.stdin);
     const rdr = br.reader();
 
     var line = std.ArrayList(u8).init(alloc);

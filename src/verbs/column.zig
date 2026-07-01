@@ -26,8 +26,8 @@ fn eql(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, a, b);
 }
 
-fn fail(comptime msg: []const u8) !u8 {
-    try std.io.getStdErr().writer().writeAll(msg);
+fn fail(w: std.io.AnyWriter, comptime msg: []const u8) !u8 {
+    try w.writeAll(msg);
     return 2;
 }
 
@@ -94,26 +94,26 @@ pub fn run(ctx: *api.Context) !u8 {
             // table mode is the default; accepted for familiarity
         } else if (eql(a, "-s") or eql(a, "--separator")) {
             i += 1;
-            if (i >= ctx.args.len) return fail("coel column: `-s` needs a separator\n");
+            if (i >= ctx.args.len) return fail(ctx.stderr, "coel column: `-s` needs a separator\n");
             sep = ctx.args[i];
         } else if (eql(a, "-o") or eql(a, "--output-separator")) {
             i += 1;
-            if (i >= ctx.args.len) return fail("coel column: `-o` needs a separator\n");
+            if (i >= ctx.args.len) return fail(ctx.stderr, "coel column: `-o` needs a separator\n");
             outsep = ctx.args[i];
         } else {
-            return fail("coel column: unexpected argument\n");
+            return fail(ctx.stderr, "coel column: unexpected argument\n");
         }
     }
 
-    const data = try std.io.getStdIn().readToEndAlloc(ctx.gpa, max_input);
+    const data = try ctx.stdin.readAllAlloc(ctx.gpa, max_input);
     defer ctx.gpa.free(data);
 
     const f = try format(ctx.gpa, data, sep, outsep);
     defer ctx.gpa.free(f.bytes);
-    try std.io.getStdOut().writeAll(f.bytes);
+    try ctx.stdout.writeAll(f.bytes);
 
     if (ctx.mode == .agent) {
-        var em = contract.Emitter.init("coel.column", "0.1.0");
+        var em = contract.Emitter.init(ctx.stderr, "coel.column", "0.1.0");
         try em.frame("summary", "\"rows\":{d},\"cols\":{d}", .{ f.rows, f.cols });
     }
     return 0;

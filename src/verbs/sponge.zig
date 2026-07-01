@@ -26,7 +26,7 @@ pub fn run(ctx: *api.Context) !u8 {
     const alloc = ctx.gpa;
 
     // Read everything first — this is the whole point of sponge.
-    const data = try std.io.getStdIn().readToEndAlloc(alloc, max_input);
+    const data = try ctx.stdin.readAllAlloc(alloc, max_input);
     defer alloc.free(data);
 
     const to_file = ctx.args.len >= 1;
@@ -36,11 +36,11 @@ pub fn run(ctx: *api.Context) !u8 {
         defer f.close();
         try f.writeAll(data);
     } else {
-        try std.io.getStdOut().writeAll(data);
+        try ctx.stdout.writeAll(data);
     }
 
     if (ctx.mode == .agent) {
-        var em = contract.Emitter.init("coel.sponge", "0.1.0");
+        var em = contract.Emitter.init(ctx.stderr, "coel.sponge", "0.1.0");
         try em.frame("summary", "\"bytes\":{d},\"to_file\":{s}", .{ data.len, if (to_file) "true" else "false" });
     }
     return 0;

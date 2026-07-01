@@ -173,12 +173,20 @@ pub fn main() !u8 {
     }
     if (store_dir) |d| std.fs.cwd().makePath(d) catch {};
 
+    // Kept alive for the duration of the verb: `.any()` points into these.
+    var stdin_r = std.io.getStdIn().reader();
+    var stdout_w = std.io.getStdOut().writer();
+    var stderr_w = std.io.getStdErr().writer();
+
     var store = handles.Store{ .dir = store_dir };
     var ctx = api.Context{
         .gpa = gpa,
         .args = args.items,
         .mode = mode.detect(forced),
         .store = &store,
+        .stdin = stdin_r.any(),
+        .stdout = stdout_w.any(),
+        .stderr = stderr_w.any(),
     };
     return verb.run(&ctx);
 }

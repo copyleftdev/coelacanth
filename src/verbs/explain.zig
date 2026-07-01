@@ -22,11 +22,11 @@ pub const spec = api.Spec{
 
 pub fn run(ctx: *api.Context) !u8 {
     if (ctx.args.len < 1) {
-        try std.io.getStdErr().writer().writeAll("usage: coel explain <handle>\n");
+        try ctx.stderr.writeAll("usage: coel explain <handle>\n");
         return 2;
     }
     if (ctx.store.dir == null) {
-        try std.io.getStdErr().writer().writeAll("coel explain: no store configured (set --store <dir> or $COEL_STORE)\n");
+        try ctx.stderr.writeAll("coel explain: no store configured (set --store <dir> or $COEL_STORE)\n");
         return 2;
     }
 
@@ -37,18 +37,18 @@ pub fn run(ctx: *api.Context) !u8 {
     const bytes = try ctx.store.get(ctx.gpa, hex);
     if (bytes) |b| {
         defer ctx.gpa.free(b);
-        try std.io.getStdOut().writeAll(b);
+        try ctx.stdout.writeAll(b);
         if (ctx.mode == .agent) {
-            var em = contract.Emitter.init("coel.explain", "0.1.0");
+            var em = contract.Emitter.init(ctx.stderr, "coel.explain", "0.1.0");
             try em.frame("summary", "\"bytes\":{d},\"found\":true", .{b.len});
         }
         return 0;
     } else {
         if (ctx.mode == .agent) {
-            var em = contract.Emitter.init("coel.explain", "0.1.0");
+            var em = contract.Emitter.init(ctx.stderr, "coel.explain", "0.1.0");
             try em.frame("summary", "\"bytes\":0,\"found\":false", .{});
         } else {
-            try std.io.getStdErr().writer().print("coel explain: handle '{s}' not found in store\n", .{raw});
+            try ctx.stderr.print("coel explain: handle '{s}' not found in store\n", .{raw});
         }
         return 1;
     }

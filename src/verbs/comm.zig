@@ -103,7 +103,7 @@ pub fn run(ctx: *api.Context) !u8 {
         }
     }
     if (file_paths.items.len != 2) {
-        try std.io.getStdErr().writer().writeAll("coel comm: need exactly two files\n");
+        try ctx.stderr.writeAll("coel comm: need exactly two files\n");
         return 2;
     }
 
@@ -112,11 +112,10 @@ pub fn run(ctx: *api.Context) !u8 {
     const a = try splitLines(arena, da);
     const b = try splitLines(arena, db);
 
-    const out = std.io.getStdOut().writer();
-    const c = try merge(a, b, s1, s2, s3, out);
+    const c = try merge(a, b, s1, s2, s3, ctx.stdout);
 
     if (ctx.mode == .agent) {
-        var em = contract.Emitter.init("coel.comm", "0.1.0");
+        var em = contract.Emitter.init(ctx.stderr, "coel.comm", "0.1.0");
         try em.frame("summary", "\"only1\":{d},\"only2\":{d},\"both\":{d}", .{ c.only1, c.only2, c.both });
     }
     return 0;

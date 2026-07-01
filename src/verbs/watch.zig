@@ -55,8 +55,8 @@ fn eql(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, a, b);
 }
 
-fn fail(comptime msg: []const u8) !u8 {
-    try std.io.getStdErr().writer().writeAll(msg);
+fn fail(w: std.io.AnyWriter, comptime msg: []const u8) !u8 {
+    try w.writeAll(msg);
     return 2;
 }
 
@@ -73,18 +73,18 @@ pub fn run(ctx: *api.Context) !u8 {
         const a = ctx.args[i];
         if (template.items.len == 0 and (eql(a, "-n") or eql(a, "--interval"))) {
             i += 1;
-            if (i >= ctx.args.len) return fail("coel watch: `-n` needs seconds\n");
-            interval_s = std.fmt.parseFloat(f64, ctx.args[i]) catch return fail("coel watch: bad -n value\n");
+            if (i >= ctx.args.len) return fail(ctx.stderr, "coel watch: `-n` needs seconds\n");
+            interval_s = std.fmt.parseFloat(f64, ctx.args[i]) catch return fail(ctx.stderr, "coel watch: bad -n value\n");
         } else if (template.items.len == 0 and (eql(a, "-c") or eql(a, "--count"))) {
             i += 1;
-            if (i >= ctx.args.len) return fail("coel watch: `-c` needs a number\n");
-            count = std.fmt.parseInt(u64, ctx.args[i], 10) catch return fail("coel watch: bad -c value\n");
+            if (i >= ctx.args.len) return fail(ctx.stderr, "coel watch: `-c` needs a number\n");
+            count = std.fmt.parseInt(u64, ctx.args[i], 10) catch return fail(ctx.stderr, "coel watch: bad -c value\n");
         } else {
             try template.append(a);
         }
     }
 
-    if (template.items.len == 0) return fail("coel watch: no command given\n");
+    if (template.items.len == 0) return fail(ctx.stderr, "coel watch: no command given\n");
 
     const interval_ns: u64 = if (interval_s > 0)
         @intFromFloat(interval_s * @as(f64, std.time.ns_per_s))
@@ -93,8 +93,8 @@ pub fn run(ctx: *api.Context) !u8 {
     const argv = template.items;
 
     installSigint();
-    var em = contract.Emitter.init("coel.watch", "0.1.0");
-    const out = std.io.getStdOut().writer();
+    var em = contract.Emitter.init(ctx.stderr, "coel.watch", "0.1.0");
+    const out = ctx.stdout;
 
     var iter: u64 = 0;
     var changes: u64 = 0;
@@ -168,7 +168,7 @@ pub fn run(ctx: *api.Context) !u8 {
 
     switch (ctx.mode) {
         .agent => try em.frame("summary", "\"iters\":{d},\"changes\":{d},\"last_exit\":{d}", .{ iter, changes, last_exit }),
-        .human => try std.io.getStdErr().writer().print("\nwatched {d} iterations, {d} changes, last_exit={d}\n", .{ iter, changes, last_exit }),
+        .human => try ctx.stderr.print("\nwatched {d} iterations, {d} changes, last_exit={d}\n", .{ iter, changes, last_exit }),
     }
     return 0;
 }

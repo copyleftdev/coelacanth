@@ -67,6 +67,13 @@ pub const Context = struct {
     /// Evidence store for handle dereferencing; disabled unless `--store` /
     /// `$COEL_STORE` set. Shared (pointer) so parallel workers persist safely.
     store: *handles.Store,
+    /// I/O is injected (type-erased) rather than hardcoded to the process
+    /// handles, so tests can drive a verb with in-memory buffers and inspect
+    /// exactly what it wrote. In production `main` wires these to the real
+    /// stdin/stdout/stderr. Convention: stdout = payload, stderr = contract.
+    stdin: std.io.AnyReader,
+    stdout: std.io.AnyWriter,
+    stderr: std.io.AnyWriter,
 };
 
 /// A registered verb: its contract plus its entry point. `run` returns the

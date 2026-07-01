@@ -36,18 +36,14 @@ fn rateBps(total: u64, elapsed_ns: u64) u64 {
     return std.math.cast(u64, r) orelse std.math.maxInt(u64);
 }
 
-fn reportHuman(total: u64, elapsed_ns: u64) !void {
-    const w = std.io.getStdErr().writer();
+fn reportHuman(w: std.io.AnyWriter, total: u64, elapsed_ns: u64) !void {
     const secs = @as(f64, @floatFromInt(elapsed_ns)) / std.time.ns_per_s;
     try w.print("\r  {d} bytes  {d} B/s  {d:.1}s   ", .{ total, rateBps(total, elapsed_ns), secs });
 }
 
 pub fn run(ctx: *api.Context) !u8 {
     _ = ctx.args;
-    var em = contract.Emitter.init("coel.pv", "0.1.0");
-
-    const in = std.io.getStdIn();
-    const out = std.io.getStdOut();
+    var em = contract.Emitter.init(ctx.stderr, "coel.pv", "0.1.0");
 
     var timer = try std.time.Timer.start();
     var buf: [buf_size]u8 = undefined;
@@ -55,16 +51,16 @@ pub fn run(ctx: *api.Context) !u8 {
     var last_report_ns: u64 = 0;
 
     while (true) {
-        const n = try in.read(&buf);
+        const n = try ctx.stdin.read(&buf);
         if (n == 0) break;
-        try out.writeAll(buf[0..n]);
+        try ctx.stdout.writeAll(buf[0..n]);
         total += n;
 
         const elapsed = timer.read();
         if (elapsed - last_report_ns >= report_interval_ns) {
             switch (ctx.mode) {
                 .agent => try em.frame("progress", "\"bytes\":{d},\"rate_bps\":{d}", .{ total, rateBps(total, elapsed) }),
-                .human => try reportHuman(total, elapsed),
+                .human => try reportHuman(ctx.stderr, total, elapsed),
             }
             last_report_ns = elapsed;
         }
@@ -79,8 +75,8 @@ pub fn run(ctx: *api.Context) !u8 {
             .{ total, secs, rateBps(total, elapsed) },
         ),
         .human => {
-            try reportHuman(total, elapsed);
-            try std.io.getStdErr().writer().writeByte('\n');
+            try reportHuman(ctx.stderr, total, elapsed);
+            try ctx.stderr.writeByte('\n');
         },
     }
     return 0;

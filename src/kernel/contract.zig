@@ -9,12 +9,15 @@ const std = @import("std");
 /// Every frame carries `t` (type), a monotonic `seq`, and `ts` (ms since epoch,
 /// the only nondeterministic field — isolated so an agent can normalize it).
 pub const Emitter = struct {
+    w: std.io.AnyWriter,
     seq: u64 = 0,
     schema_name: []const u8,
     schema_version: []const u8,
 
-    pub fn init(schema_name: []const u8, schema_version: []const u8) Emitter {
-        return .{ .schema_name = schema_name, .schema_version = schema_version };
+    /// `w` is where frames go — the injected stderr (see Context), so tests can
+    /// capture frames in a buffer instead of the real terminal.
+    pub fn init(w: std.io.AnyWriter, schema_name: []const u8, schema_version: []const u8) Emitter {
+        return .{ .w = w, .schema_name = schema_name, .schema_version = schema_version };
     }
 
     /// Write one frame. `fmt`/`args` supply the type-specific fields as a JSON
@@ -24,9 +27,8 @@ pub const Emitter = struct {
     pub fn frame(self: *Emitter, t: []const u8, comptime fmt: []const u8, args: anytype) !void {
         self.seq += 1;
         const ts = std.time.milliTimestamp();
-        const w = std.io.getStdErr().writer();
-        try w.print("{{\"t\":\"{s}\",\"seq\":{d},\"ts\":{d}", .{ t, self.seq, ts });
-        if (comptime fmt.len > 0) try w.print("," ++ fmt, args);
-        try w.print("}}\n", .{});
+        try self.w.print("{{\"t\":\"{s}\",\"seq\":{d},\"ts\":{d}", .{ t, self.seq, ts });
+        if (comptime fmt.len > 0) try self.w.print("," ++ fmt, args);
+        try self.w.print("}}\n", .{});
     }
 };

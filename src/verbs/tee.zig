@@ -52,20 +52,18 @@ pub fn run(ctx: *api.Context) !u8 {
         try files.append(f);
     }
 
-    const in = std.io.getStdIn();
-    const out = std.io.getStdOut();
     var buf: [64 * 1024]u8 = undefined;
     var total: u64 = 0;
     while (true) {
-        const n = try in.read(&buf);
+        const n = try ctx.stdin.read(&buf);
         if (n == 0) break;
-        try out.writeAll(buf[0..n]);
+        try ctx.stdout.writeAll(buf[0..n]);
         for (files.items) |f| try f.writeAll(buf[0..n]);
         total += n;
     }
 
     if (ctx.mode == .agent) {
-        var em = contract.Emitter.init("coel.tee", "0.1.0");
+        var em = contract.Emitter.init(ctx.stderr, "coel.tee", "0.1.0");
         try em.frame("summary", "\"bytes\":{d},\"files\":{d}", .{ total, paths.items.len });
     }
     return 0;
