@@ -4,11 +4,6 @@
 > record had filed under *extinct for 66 million years*. It had been down there
 > the whole time. Alive. Just unlooked-at.
 
-![mutation score](https://img.shields.io/badge/mutation%20score-94.5%25-brightgreen)
-![tests](https://img.shields.io/badge/tests-passing-brightgreen)
-![license](https://img.shields.io/badge/license-MIT-blue)
-![Zig](https://img.shields.io/badge/Zig-0.14-orange)
-
 `pv`, `watch`, `ts`, `parallel`, `sponge`, `comm`, `column`, `tac`, `tee` — the
 Unix tools everyone stopped teaching. They aren't dead either. And the problems
 they've quietly solved for decades — no visibility into a long run, a stream that
