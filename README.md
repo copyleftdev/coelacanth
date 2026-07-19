@@ -4,6 +4,8 @@
 
 # coelacanth
 
+[![Tip my tokens](https://tokentip.to/badge/copyleftdev.svg?logo=1)](https://tokentip.to/@copyleftdev)
+
 > In 1938 a trawler off South Africa hauled up a coelacanth — a fish the fossil
 > record had filed under *extinct for 66 million years*. It had been down there
 > the whole time. Alive. Just unlooked-at.
